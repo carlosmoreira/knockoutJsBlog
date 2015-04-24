@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/knockoutjs/dist/knockout.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="row" data-bind="foreach:pageinated">
+        <div class="col-md-12">
+            <h4 data-bind="text:title"></h4>
+            <div data-bind="text:$root.decode(content)"></div>
+        </div>
+    </div>
+
+    <ul data-bind="foreach: new Array(totalBlogsPages())" class="pagination">
+        <li data-bind="">
+            <a href="#" data-bind="click:$root.changePage($index()),text:$index() + 1"></a>
+        </li>
+    </ul>
+</div>
+
+
+<script>
+    var decode_entities = (function() {
+        // Remove HTML Entities
+        var element = document.createElement('div');
+
+        function decode_HTML_entities (str) {
+
+            if(str && typeof str === 'string') {
+
+                // Escape HTML before decoding for HTML Entities
+                str = escape(str).replace(/%26/g,'&').replace(/%23/g,'#').replace(/%3B/g,';');
+
+                element.innerHTML = str;
+                if(element.innerText){
+                    str = element.innerText;
+                    element.innerText = '';
+                }else{
+                    // Firefox support
+                    str = element.textContent;
+                    element.textContent = '';
+                }
+            }
+            return unescape(str);
+        }
+        return decode_HTML_entities;
+    })();
+    var decodeEntities = (function() {
+        // this prevents any overhead from creating the object each time
+        var element = document.createElement('div');
+
+        function decodeHTMLEntities (str) {
+            if(str && typeof str === 'string') {
+                // strip script/html tags
+                str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+                str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+                element.innerHTML = str;
+                str = element.textContent;
+                element.textContent = '';
+            }
+
+            return str;
+        }
+
+        return decodeHTMLEntities;
+    })();
+    var BlogModel = function (data) {
+        var self = this;
+
+        self.blogs = ko.observableArray(data);
+        self.currentPage = ko.observable(0);
+        self.totalDisplay = 5;
+
+        self.decode = function(data){
+            return decode_entities(data);
+        };
+
+        self.totalBlogsPages = ko.computed(function () {
+            var div = Math.floor(self.blogs().length / self.totalDisplay);
+            div += self.blogs().length % self.totalDisplay > 0 ? 1 : 0;
+            return (div - 1 == -1) ? 0 : (div - 1) ;
+        });
+
+        self.pageinated = ko.computed(function () {
+            var first = self.currentPage() * self.totalDisplay;
+            return self.blogs().slice(first, first + self.totalDisplay);
+        });
+
+
+        self.changePage = function(index){
+           self.currentPage(index);
+        };
+
+
+    };
+    $.getJSON('archiveblog.json', function (data) {
+        ko.applyBindings(new BlogModel(data));
+    });
+
+</script>
+</body>
+</html>
